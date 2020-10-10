@@ -1,0 +1,5 @@
+server usage:
+python server.py –host <hostip> –port <xxxx> -zookeeper <zkip> -zookeeper_port
+<zkport> 
+
+client usage:
