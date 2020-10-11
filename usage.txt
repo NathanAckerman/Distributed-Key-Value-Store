@@ -1,5 +1,10 @@
 server usage:
 python server.py –host <hostip> –port <xxxx> -zookeeper <zkip> -zookeeper_port
 <zkport> 
+example:
+python3 server.py -host 127.0.0.1 -port 34567 -zookeeper 127.0.0.1 2181
+
+
 
 client usage:
+
