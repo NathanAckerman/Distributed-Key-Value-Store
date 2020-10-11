@@ -1,4 +1,5 @@
 import sys
+import requests
 from flask import *
 from flask_restful import Resource, Api
 from kazoo.client import KazooClient
@@ -27,20 +28,15 @@ zk.start()
 
 
 #make sure election file exists
-#if zk.exists("/election/") is None:
-#    zk.create("/election/")
-
 try:
     zk.create("/election/")
-except:
+except:#just skip if already exists
     pass
 
-#does_exist = zk.exists("/election/")
-#print(f"exists: {does_exist}")
 
+#create node for this server
+#data is ip:port of the server
 zk.create("/election/", bytes(host_ip+":"+host_port, encoding='ascii'), ephemeral=True ,sequence=True)
-children = zk.get_children("/election/")
-
 
 def leader_func():
     this_node_is_leader = True
@@ -48,15 +44,13 @@ def leader_func():
     return
 
 
-
 #do new leader election
 election = zk.Election("/election")
 ret_val = election.run(leader_func)
-print(f"ret_val: {ret_val}") #TODO look at this
 
 #set up watch
-@zk.ChildrenWatch('/election')
-def contend_for_leader(children):
+@zk.DataWatch('/election')
+def contend_for_leader(data,val):
     print("Contending for leader")
     this_node_is_leader = False
     election = zk.Election("/election")
@@ -72,19 +66,25 @@ class ReadValue(Resource):
 
 
 def set_new_value_globally(the_key, the_value):
-    return "TODO"
+    the_nodes = kz.get_children("/election")
+    for n in the_nodes:
+        node_data = zk.get("/election/"+n)[0].decode()
+        r = requests.get(the_leader_data+"/FromLeader/"+the_key+"/"the_val)
 
 def send_new_value_to_leader(the_key, the_val):
-    return "TODO"
+    the_nodes = kz.get_children("/election")
+    leader_num = sorted(children)[0]
+    the_leader_data = zk.get("/election/"+leader_num)[0].decode()
+    r = requests.get(the_leader_data+"/ForLeader"+the_key+"/"the_val)
 
 class AddUpdateValue(Resource):
     def get(self, the_key, the_val):
-        return send_new_value_to_leader(the_key, the_val)
+        send_new_value_to_leader(the_key, the_val)
         
 
 class AUVForLeader(Resource):
     def get(self, the_key, the_val):
-        return set_new_value_globally(the_key, the_val)
+        set_new_value_globally(the_key, the_val)
         
 
 class AUVFromLeader(Resource):
@@ -95,8 +95,8 @@ class AUVFromLeader(Resource):
 
 api.add_resource(ReadValue, '/<string:the_key>')
 api.add_resource(AddUpdateValue, '/<string:the_key>/<string:the_val>')
-api.add_resource(AUVForLeader, '/<string:the_key>/<string:the_val>')
-api.add_resource(AUVFromLeader, '/<string:the_key>/<string:the_val>')
+api.add_resource(AUVForLeader, '/ForLeader/<string:the_key>/<string:the_val>')
+api.add_resource(AUVFromLeader, '/FromLeader/<string:the_key>/<string:the_val>')
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=int(host_port))

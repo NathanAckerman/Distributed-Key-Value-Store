@@ -1,0 +1,5 @@
+requires the following python packages be installed:
+requests
+flask
+fkask_restful
+kazoo
