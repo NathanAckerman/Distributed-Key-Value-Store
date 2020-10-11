@@ -8,6 +8,7 @@ import logging
 app = Flask(__name__)
 api = Api(app)
 the_dict = {}
+this_node_is_leader = False
 
 #python server.py –host <hostip> –port <xxxx> -zookeeper <zkip> -zookeeper_port
 #<zkport>
@@ -23,7 +24,44 @@ logging.basicConfig()
 
 zk = KazooClient(hosts=zkip+':'+zkport)
 zk.start()
-print("post start")
+
+
+#make sure election file exists
+#if zk.exists("/election/") is None:
+#    zk.create("/election/")
+
+try:
+    zk.create("/election/")
+except:
+    pass
+
+#does_exist = zk.exists("/election/")
+#print(f"exists: {does_exist}")
+
+zk.create("/election/", bytes(host_ip+":"+host_port, encoding='ascii'), ephemeral=True ,sequence=True)
+children = zk.get_children("/election/")
+
+
+def leader_func():
+    this_node_is_leader = True
+    print("LOOK AT ME, I'M THE CAPTAIN NOW")
+    return
+
+
+
+#do new leader election
+election = zk.Election("/election")
+ret_val = election.run(leader_func)
+print(f"ret_val: {ret_val}") #TODO look at this
+
+#set up watch
+@zk.ChildrenWatch('/election')
+def contend_for_leader(children):
+    print("Contending for leader")
+    this_node_is_leader = False
+    election = zk.Election("/election")
+    ret_val = election.run(leader_func)
+    print(f"ret_val: {ret_val}") #TODO look at this
 
 class ReadValue(Resource):
     def get(self, the_key):
@@ -37,7 +75,7 @@ def set_new_value_globally(the_key, the_value):
     return "TODO"
 
 def send_new_value_to_leader(the_key, the_val):
-    return TODO
+    return "TODO"
 
 class AddUpdateValue(Resource):
     def get(self, the_key, the_val):
