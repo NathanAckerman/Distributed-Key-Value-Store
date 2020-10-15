@@ -1,1 +1,1 @@
-python server.py –host 127.0.0.1 –port 5000 -zookeeper $1 -zookeeper_port 2181
+python3 server.py –host 127.0.0.1 –port $1 -zookeeper 172.17.0.2 -zookeeper_port 2181
