@@ -9,17 +9,19 @@ node_ip = "127.0.0.1"
 
 node_data = node_ip + ":" + s1_port
 the_key = "key0"
-the_val = "val0"
+the_val = "val2"
 r = requests.get("http://"+node_data+"/"+the_key)
-print(f"initial req for key0 should be nothing: {r}")
-
-print("setting key0=val0")
-r = requests.get("http://"+node_data+"/"+the_key+"/"+the_val)
-print("getting value for key0")
-r = requests.get("http://"+node_data+"/"+the_key)
-print(f"req for key0 should be val0: {r}")
+r = r.content.decode()
+print(f"req for key0 on old leader should be stale and should be nothing: {r}")
 
 node_data = node_ip + ":" + s2_port
-print("getting value of key0 on a differnt node")
+print("setting key0=val2 from another node")
+r = requests.get("http://"+node_data+"/"+the_key+"/"+the_val)
+r = r.content.decode()
+
+print("getting value for key0 from old leader")
+node_data = node_ip + ":" + s1_port
 r = requests.get("http://"+node_data+"/"+the_key)
-print(f"req for key0 from diff node should be val0: {r}")
+r = r.content.decode()
+print(f"req for key0 from old leader should be val2: {r}")
+

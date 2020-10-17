@@ -22,9 +22,17 @@ The servers expose 2 endpoints to the client:
 The first returns the value of the key. The second sets the value.
 The endpoints can also easily be used with anything that makes http requests,
 sucha s the requests library in python which is how testing is done.
+example:
+in browser go to http://127.0.0.1:<port_num>/key0/val0
+or from bash:
+wget http://127.0.0.1:<port_num>/key0
+then cat file key0 to see value
 
 driver-test usage:
+*important*: run with different ports and unique_zk_name each time (or wait a while)
 ./driver_test.sh <unique_zk_name> <port1> <port2> <port3>
+example:
+./driver_test.sh zk123 22334 33445 44556 
 This will start the zk docker, then start 3 servers. After this, it will
 run the required requests for test1 from a python script. It will then kill
 the leader (the first server), then run requests from a python file for test 2.
