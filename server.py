@@ -26,19 +26,18 @@ logging.basicConfig()
 zk = KazooClient(hosts=str(zkip)+':'+str(zkport))
 zk.start()
 
-
 #make sure election file exists
 try:
     zk.create("/election/")
 except:#just skip if already exists
     pass
 
-
 #create node for this server
 #data is ip:port of the server
 zk.create("/election/", bytes(host_ip+":"+host_port, encoding='ascii'), ephemeral=True ,sequence=True)
 
 #set up watch
+#run this function any time children (nodes in system change)
 @zk.ChildrenWatch('/election')
 def contend_for_leader(children):
     print("Contending for leader")
@@ -46,6 +45,7 @@ def contend_for_leader(children):
     the_nodes = children
     print("nodes in sys to find leader:")
     print(the_nodes)
+    #lowest number is the leader
     leader_num = sorted(the_nodes)[0]
     the_leader_data = zk.get("/election/"+leader_num)[0].decode()
     if host_ip in the_leader_data and host_port in the_leader_data:
@@ -54,6 +54,7 @@ def contend_for_leader(children):
     else:
         print("i am not the leader")
 
+#read local value of data
 class ReadValue(Resource):
     def get(self, the_key):
         if the_key in the_dict:
@@ -61,7 +62,7 @@ class ReadValue(Resource):
         else:
             return None
 
-
+#send new k/v pair to all nodes in system
 def set_new_value_globally(the_key, the_val):
     the_nodes = zk.get_children("/election")
     print("nodes in system:")
@@ -70,12 +71,13 @@ def set_new_value_globally(the_key, the_val):
         node_data = zk.get("/election/"+n)[0].decode()
         print(node_data)
         try:
-            r = requests.get("http://"+node_data+"/FromLeader/"+the_key+"/"+the_val, timeout=5)
+            r = requests.get("http://"+node_data+"/FromLeader/"+the_key+"/"+the_val, timeout=8)
             print("not passing")
         except:
             print("passing")
             pass
 
+#give the new value of a var to the leader
 def send_new_value_to_leader(the_key, the_val):
     print("sending new value to leader")
     the_nodes = zk.get_children("/election")
@@ -86,28 +88,29 @@ def send_new_value_to_leader(the_key, the_val):
     r = requests.get("http://"+the_leader_data+"/ForLeader/"+the_key+"/"+the_val)
     print("done with leader")
 
+#update k/v pair, must go through leader
 class AddUpdateValue(Resource):
     def get(self, the_key, the_val):
         print("update req received")
         send_new_value_to_leader(the_key, the_val)
         return the_key + " = " + the_val
         
-
+#update coming into leader from a node in the system
 class AUVForLeader(Resource):
     def get(self, the_key, the_val):
         set_new_value_globally(the_key, the_val)
         return "done"
         
-
+#update coming into a node in the system from the leader
 class AUVFromLeader(Resource):
     def get(self, the_key, the_val):
         the_dict[the_key] = the_val
         return "done"
 
-
-
+#public endpoints for client
 api.add_resource(ReadValue, '/<string:the_key>')
 api.add_resource(AddUpdateValue, '/<string:the_key>/<string:the_val>')
+#private ones used within the system
 api.add_resource(AUVForLeader, '/ForLeader/<string:the_key>/<string:the_val>')
 api.add_resource(AUVFromLeader, '/FromLeader/<string:the_key>/<string:the_val>')
 

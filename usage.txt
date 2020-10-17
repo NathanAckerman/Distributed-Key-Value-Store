@@ -1,10 +1,31 @@
+see dependencies.txt for that...
+
+starting zookeeper:
+./zk.sh <unique_str>
+example:
+./zk.sh zk_run_5
+
 server usage:
 python server.py –host <hostip> –port <xxxx> -zookeeper <zkip> -zookeeper_port
 <zkport> 
 example:
 python3 server.py -host 127.0.0.1 -port 34567 -zookeeper 127.0.0.1 2181
-
-
+This can also be started by ./start_server.sh <port_num>, assuming the zk docker
+is running on default port/ip
 
 client usage:
+The servers use a rest api via http. This means a web browser or wget can easily set and retrieve
+values from the server with get requests (yes, get, not put/post).
+The servers expose 2 endpoints to the client:
+/key
+/key/value
+The first returns the value of the key. The second sets the value.
+The endpoints can also easily be used with anything that makes http requests,
+sucha s the requests library in python which is how testing is done.
 
+driver-test usage:
+./driver_test.sh <unique_zk_name> <port1> <port2> <port3>
+This will start the zk docker, then start 3 servers. After this, it will
+run the required requests for test1 from a python script. It will then kill
+the leader (the first server), then run requests from a python file for test 2.
+Lastly, it will bring the old leader node back up and run the required requests.
